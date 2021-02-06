@@ -3,7 +3,7 @@ const http=require('http')
 const express=require('express')
 const socketio=require('socket.io')
 const {generateMessage,locationMessage}=require('./utils/messages')
-
+const {addUser, getUser, removeUser, getUsersInRoom}=require('./utils/users')
 
 const app=express()
 const server= http.createServer(app)
@@ -20,43 +20,53 @@ let count=0
 
 io.on('connection', (socket)=>
 {
-    // console.log('new connection')
-
-    socket.emit('countUpdated',count)
-    // socket.broadcast.emit('message',generateMessage('New User has joined!'))
     
-    socket.on('join',({username,room})=>{
-        socket.join(room)
-        socket.broadcast.to(room).emit('message',generateMessage(`${username} has joined!`))
+    socket.on('join',({username,room},callback)=>{
+        const {error,user}=addUser({id:socket.id, username:username, room:room})
 
-    })
+        if(error){
+            return callback(error)
+        }
 
-    socket.on('increment' ,()=>
-    {
-        count++;
-        // socket.emit('countUpdated',count)
-        io.emit('countUpdated',count)
+        socket.join(user.room)
+        socket.emit('message',generateMessage(`Welcome!`,{username:'Admin'}))
+        socket.broadcast.to(user.room).emit('message',generateMessage(`${user.username} has joined!`,{username:'Admin'}))
 
-        
+        io.to(user.room).emit('roomData',{
+            room:user.room,
+            users:getUsersInRoom(user.room)
+        })
     })
 
     socket.on('inputMsg',(msg,callback)=>{
-         
-        io.emit('message',generateMessage(msg))
-        callback()
+        const user=getUser(socket.id)
+        if(user){
+            io.to(user.room).emit('message',generateMessage(msg,user))
+            callback()
+
+        }
     })
 
-    socket.emit('message',generateMessage('Welcome!'))
+    // socket.emit('message',generateMessage('Welcome!',))
 
     socket.on('disconnect',()=>{
-        io.emit('message',generateMessage('A user has left'))
+        const user=removeUser(socket.id)
+        if(user){
+            io.to(user.room).emit('message',generateMessage(`${user.username} has left`,user))
+            io.to(user.room).emit('roomData',{
+                room:user.room,
+                users:getUsersInRoom(user.room)
+            })
+        }
     })
 
     socket.on('shareLocation',(curPosition,callback)=>{
-        
+        const user=getUser(socket.id)
         // socket.broadcast.emit('message',`New User has joined with latitute ${curPosition.lat} and longitude ${curPosition.long}`)
-        io.emit('locationMessage',locationMessage(curPosition))
-        callback('location shared')
+        if(user){
+            io.emit('locationMessage',locationMessage(curPosition,user))
+            callback('location shared') 
+        }
     })
 }) 
 

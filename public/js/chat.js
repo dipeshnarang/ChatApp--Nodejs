@@ -11,26 +11,25 @@ const $messages=document.querySelector('#messages')
 //Templates
 const $messageTemplate=document.querySelector('#message-template').innerHTML
 const locationMessageTemplate=document.querySelector('#location-message').innerHTML
+const sidebarTemplate=document.querySelector('#sidebar-template').innerHTML
 
 //Query String
 const {username, room}=Qs.parse(location.search, {ignoreQueryPrefix:true})
 
-socket.on('countUpdated', (count)=>
-{
-    console.log('count has been updated : ' +count)
-})
+const autoscroll=function(){
+    //Last Element
+    const newMessage=$messages.lastElementChild
 
-// const increment=document.querySelector('#btn1')
-// increment.addEventListener('click', ()=>
-// {
+    //Last Element Properties
+    const newMessageStyel=getComputedStyle(newMessage)
+    const newMessageHeight=newMessage.offsetHeight
 
-//     console.log('clicked')
-//     socket.emit('increment')
-// }) 
+}
 
 socket.on('message',(message)=>{
     console.log(message)
     const html=Mustache.render($messageTemplate,{
+        username:message.username,
         message:message.text,
         createdAt:moment(message.createdAt).format('h:mm a')
     })
@@ -40,11 +39,13 @@ socket.on('message',(message)=>{
 socket.on('locationMessage',(location)=>{
     console.log(location)
     const html=Mustache.render(locationMessageTemplate,{
+        username:location.username,
         location:location.url,
         createdAt:moment(location.createdAt).format('h:mm a')
     })
     $messages.insertAdjacentHTML('beforeend',html)
 })
+
 
 $formElement.addEventListener('submit',(e)=>{
     e.preventDefault()
@@ -84,4 +85,20 @@ $shareLocationButton.addEventListener('click',()=>{
     
 })
 
-socket.emit('join',{username,room})
+socket.emit('join',{username,room},(error)=>{
+    if(error){
+        alert(error)
+        location.href='/'
+    }
+})
+
+socket.on('roomData',({room,users})=>{
+    console.log(room)
+    console.log(users)
+
+    const html=Mustache.render(sidebarTemplate,{
+        room:room,
+        users:users
+    })
+    document.querySelector('#sidebar').innerHTML=html
+})
