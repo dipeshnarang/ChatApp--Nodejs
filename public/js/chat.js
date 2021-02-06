@@ -21,8 +21,22 @@ const autoscroll=function(){
     const newMessage=$messages.lastElementChild
 
     //Last Element Properties
-    const newMessageStyel=getComputedStyle(newMessage)
-    const newMessageHeight=newMessage.offsetHeight
+    const newMessageStyle=getComputedStyle(newMessage)
+    const newMessageMargin=parseInt(newMessageStyle.marginBottom)
+    const newMessageHeight=newMessage.offsetHeight+newMessageMargin
+
+    //Visible Height
+    const visibleHeight=$messages.offsetHeight
+
+    //Height of messages container
+    const containerHeight=$messages.scrollHeight
+
+    const scrollOffset=$messages.scrollTop+visibleHeight
+
+    if(containerHeight-newMessageHeight<=scrollOffset){
+        $messages.scrollTop=$messages.scrollHeight
+    }
+
 
 }
 
@@ -34,6 +48,7 @@ socket.on('message',(message)=>{
         createdAt:moment(message.createdAt).format('h:mm a')
     })
     $messages.insertAdjacentHTML('beforeend',html)
+    autoscroll()
 })
 
 socket.on('locationMessage',(location)=>{
@@ -44,6 +59,7 @@ socket.on('locationMessage',(location)=>{
         createdAt:moment(location.createdAt).format('h:mm a')
     })
     $messages.insertAdjacentHTML('beforeend',html)
+    autoscroll()
 })
 
 
